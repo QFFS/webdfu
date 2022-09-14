@@ -219,13 +219,14 @@ var device = null;
 
     document.addEventListener('DOMContentLoaded', event => {
         let connectButton = document.querySelector("#connect");
-        let detachButton = document.querySelector("#detach");
+        // let detachButton = document.querySelector("#detach");
         let downloadButton = document.querySelector("#download");
         let uploadButton = document.querySelector("#upload");
+        // let eraseButton = document.querySelector("#erase");
         let statusDisplay = document.querySelector("#status");
-        let infoDisplay = document.querySelector("#usbInfo");
-        let dfuDisplay = document.querySelector("#dfuInfo");
-        let vidField = document.querySelector("#vid");
+        // let infoDisplay = document.querySelector("#usbInfo");
+        // let dfuDisplay = document.querySelector("#dfuInfo");
+        // let vidField = document.querySelector("#vid");
         let interfaceDialog = document.querySelector("#interfaceDialog");
         let interfaceForm = document.querySelector("#interfaceForm");
         let interfaceSelectButton = document.querySelector("#selectInterface");
@@ -234,19 +235,32 @@ var device = null;
         let fromLandingPage = false;
         let vid = 0;
         // Set the vendor ID from the landing page URL
-        if (searchParams.has("vid")) {
-            const vidString = searchParams.get("vid");
-            try {
-                if (vidString.toLowerCase().startsWith("0x")) {
-                    vid = parseInt(vidString, 16);
-                } else {
-                    vid = parseInt(vidString, 10);
-                }
-                vidField.value = "0x" + hex4(vid).toUpperCase();
-                fromLandingPage = true;
-            } catch (error) {
-                console.log("Bad VID " + vidString + ":" + error);
+        
+        // if (searchParams.has("vid")) {
+        //     const vidString = searchParams.get("vid");
+        //     try {
+        //         if (vidString.toLowerCase().startsWith("0x")) {
+        //             vid = parseInt(vidString, 16);
+        //         } else {
+        //             vid = parseInt(vidString, 10);
+        //         }
+        //         vidField.value = "0x" + hex4(vid).toUpperCase();
+        //         fromLandingPage = true;
+        //     } catch (error) {
+        //         console.log("Bad VID " + vidString + ":" + error);
+        //     }
+        // }
+        let vidString = "0x1209"
+        try {
+            if (vidString.toLowerCase().startsWith("0x")) {
+                vid = parseInt(vidString, 16);
+            } else {
+                vid = parseInt(vidString, 10);
             }
+            //vidField.value = "0x" + hex4(vid).toUpperCase();
+            fromLandingPage = true;
+        } catch (error) {
+            console.log("Bad VID " + vidString + ":" + error);
         }
 
         // Grab the serial number from the landing page
@@ -262,17 +276,20 @@ var device = null;
 
         let configForm = document.querySelector("#configForm");
 
-        let transferSizeField = document.querySelector("#transferSize");
-        let transferSize = parseInt(transferSizeField.value);
-
+        // let transferSizeField = document.querySelector("#transferSize");
+        // let transferSize = parseInt(transferSizeField.value);
+        let transferSize = 1024;
         let dfuseStartAddressField = document.querySelector("#dfuseStartAddress");
         let dfuseUploadSizeField = document.querySelector("#dfuseUploadSize");
 
         let firmwareFileField = document.querySelector("#firmwareFile");
         let firmwareFile = null;
+        // let eraseFile = null;
 
         let downloadLog = document.querySelector("#downloadLog");
         let uploadLog = document.querySelector("#uploadLog");
+        let connectLog = document.querySelector("#connectLog");
+        // let eraseLog = document.querySelector("#eraseLog");
 
         let manifestationTolerant = true;
 
@@ -283,12 +300,16 @@ var device = null;
                 statusDisplay.textContent = reason;
             }
 
-            connectButton.textContent = "Connect";
-            infoDisplay.textContent = "";
-            dfuDisplay.textContent = "";
-            detachButton.disabled = true;
-            uploadButton.disabled = true;
+            setLogContext(connectLog);
+            clearLog(connectLog);
+            connectButton.textContent = "连接";
+            logInfo("已经与bootloader断开连接!")
+            // infoDisplay.textContent = "";
+            // dfuDisplay.textContent = "";
+            // detachButton.disabled = true;
+           uploadButton.disabled = true;
             downloadButton.disabled = true;
+            // eraseButton.disabled = true;
             firmwareFileField.disabled = true;
         }
 
@@ -323,8 +344,8 @@ var device = null;
             if (desc && Object.keys(desc).length > 0) {
                 device.properties = desc;
                 let info = `WillDetach=${desc.WillDetach}, ManifestationTolerant=${desc.ManifestationTolerant}, CanUpload=${desc.CanUpload}, CanDnload=${desc.CanDnload}, TransferSize=${desc.TransferSize}, DetachTimeOut=${desc.DetachTimeOut}, Version=${hex4(desc.DFUVersion)}`;
-                dfuDisplay.textContent += "\n" + info;
-                transferSizeField.value = desc.TransferSize;
+                // dfuDisplay.textContent += "\n" + info;
+                // transferSizeField.value = desc.TransferSize;
                 transferSize = desc.TransferSize;
                 if (desc.CanDnload) {
                     manifestationTolerant = desc.ManifestationTolerant;
@@ -332,7 +353,7 @@ var device = null;
 
                 if (device.settings.alternate.interfaceProtocol == 0x02) {
                     if (!desc.CanUpload) {
-                        uploadButton.disabled = true;
+                       uploadButton.disabled = true;
                         dfuseUploadSizeField.disabled = true;
                     }
                     if (!desc.CanDnload) {
@@ -380,31 +401,36 @@ var device = null;
             // Clear logs
             clearLog(uploadLog);
             clearLog(downloadLog);
+            setLogContext(connectLog);
+            clearLog(connectLog);
+            // clearLog(eraseLog);
 
             // Display basic USB information
             statusDisplay.textContent = '';
-            connectButton.textContent = 'Disconnect';
-            infoDisplay.textContent = (
-                "Name: " + device.device_.productName + "\n" +
-                "MFG: " + device.device_.manufacturerName + "\n" +
-                "Serial: " + device.device_.serialNumber + "\n"
-            );
+            connectButton.textContent = '断开连接';
+            // infoDisplay.textContent = (
+            //     "Name: " + device.device_.productName + "\n" +
+            //     "MFG: " + device.device_.manufacturerName + "\n" +
+            //     "Serial: " + device.device_.serialNumber + "\n"
+            // );
 
             // Display basic dfu-util style info
-            dfuDisplay.textContent = formatDFUSummary(device) + "\n" + memorySummary;
+            // dfuDisplay.textContent = formatDFUSummary(device) + "\n" + memorySummary;
 
             // Update buttons based on capabilities
             if (device.settings.alternate.interfaceProtocol == 0x01) {
                 // Runtime
-                detachButton.disabled = false;
-                uploadButton.disabled = true;
+                // detachButton.disabled = false;
+               uploadButton.disabled = true;
                 downloadButton.disabled = true;
+                // eraseButton.disabled = true;
                 firmwareFileField.disabled = true;
             } else {
                 // DFU
-                detachButton.disabled = true;
-                uploadButton.disabled = false;
+                // detachButton.disabled = true;
+               uploadButton.disabled = false;
                 downloadButton.disabled = false;
+                // eraseButton.disabled = false;
                 firmwareFileField.disabled = false;
             }
 
@@ -427,7 +453,8 @@ var device = null;
                 dfuseStartAddressField.disabled = true;
                 dfuseUploadSizeField.disabled = true;
             }
-
+            logInfo("连接bootloader成功!");
+            setLogContext(null);
             return device;
         }
 
@@ -456,20 +483,20 @@ var device = null;
                         } else {
                             statusDisplay.textContent = "Multiple DFU interfaces found.";
                         }
-                        vidField.value = "0x" + hex4(matching_devices[0].device_.vendorId).toUpperCase();
-                        vid = matching_devices[0].device_.vendorId;
+                        // vidField.value = "0x" + hex4(matching_devices[0].device_.vendorId).toUpperCase();
+                        // vid = matching_devices[0].device_.vendorId;
                     }
                 }
             );
         }
 
-        vidField.addEventListener("change", function() {
-            vid = parseInt(vidField.value, 16);
-        });
+        // vidField.addEventListener("change", function() {
+        //     vid = parseInt(vidField.value, 16);
+        // });
 
-        transferSizeField.addEventListener("change", function() {
-            transferSize = parseInt(transferSizeField.value);
-        });
+        // transferSizeField.addEventListener("change", function() {
+        //     transferSize = parseInt(transferSizeField.value);
+        // });
 
         dfuseStartAddressField.addEventListener("change", function(event) {
             const field = event.target;
@@ -534,34 +561,34 @@ var device = null;
             }
         });
 
-        detachButton.addEventListener('click', function() {
-            if (device) {
-                device.detach().then(
-                    async len => {
-                        let detached = false;
-                        try {
-                            await device.close();
-                            await device.waitDisconnected(5000);
-                            detached = true;
-                        } catch (err) {
-                            console.log("Detach failed: " + err);
-                        }
+        // detachButton.addEventListener('click', function() {
+        //     if (device) {
+        //         device.detach().then(
+        //             async len => {
+        //                 let detached = false;
+        //                 try {
+        //                     await device.close();
+        //                     await device.waitDisconnected(5000);
+        //                     detached = true;
+        //                 } catch (err) {
+        //                     console.log("Detach failed: " + err);
+        //                 }
 
-                        onDisconnect();
-                        device = null;
-                        if (detached) {
-                            // Wait a few seconds and try reconnecting
-                            setTimeout(autoConnect, 5000);
-                        }
-                    },
-                    async error => {
-                        await device.close();
-                        onDisconnect(error);
-                        device = null;
-                    }
-                );
-            }
-        });
+        //                 onDisconnect();
+        //                 device = null;
+        //                 if (detached) {
+        //                     // Wait a few seconds and try reconnecting
+        //                     setTimeout(autoConnect, 5000);
+        //                 }
+        //             },
+        //             async error => {
+        //                 await device.close();
+        //                 onDisconnect(error);
+        //                 device = null;
+        //             }
+        //         );
+        //     }
+        // });
 
         uploadButton.addEventListener('click', async function(event) {
             event.preventDefault();
@@ -597,7 +624,7 @@ var device = null;
                 } catch (error) {
                     logError(error);
                 }
-
+                logInfo("固件导出成功!");
                 setLogContext(null);
             }
 
@@ -637,7 +664,7 @@ var device = null;
                 }
                 await device.do_download(transferSize, firmwareFile, manifestationTolerant).then(
                     () => {
-                        logInfo("Done!");
+                        logInfo("固件更新成功!");
                         setLogContext(null);
                         if (!manifestationTolerant) {
                             device.waitDisconnected(5000).then(
@@ -662,12 +689,40 @@ var device = null;
             //return false;
         });
 
+        // eraseButton.addEventListener('click', async function(event) {
+        //                 await device.erase().then(
+        //                     () => {
+        //                         logInfo("erase success!");
+        //                         setLogContext(null);
+        //                         if (!manifestationTolerant) {
+        //                             device.waitDisconnected(5000).then(
+        //                                 dev => {
+        //                                     onDisconnect();
+        //                                     device = null;
+        //                                 },
+        //                                 error => {
+        //                                     // It didn't reset and disconnect for some reason...
+        //                                     console.log("Device unexpectedly tolerated manifestation.");
+        //                                 }
+        //                             );
+        //                         }
+        //                     },
+        //                     error => {
+        //                         logError(error);
+        //                         setLogContext(null);
+        //                     }
+        //                 )
+        //             }
+     
+        //     //return false;
+        // );
         // Check if WebUSB is available
         if (typeof navigator.usb !== 'undefined') {
             navigator.usb.addEventListener("disconnect", onUnexpectedDisconnect);
             // Try connecting automatically
             if (fromLandingPage) {
-                autoConnect(vid, serial);
+                // autoConnect(vid, serial);
+                autoConnect(parseInt("0x1209", 16), serial);
             }
         } else {
             statusDisplay.textContent = 'WebUSB not available.'
